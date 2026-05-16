@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FA5C83222FB86A000011A1CB /* MTGSDKSwift in Frameworks */ = {isa = PBXBuildFile; productRef = FA5C83212FB86A000011A1CB /* MTGSDKSwift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		FA5C83022FB868970011A1CB /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA5C83222FB86A000011A1CB /* MTGSDKSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = "mtg-xproject-starter";
 			packageProductDependencies = (
+				FA5C83212FB86A000011A1CB /* MTGSDKSwift */,
 			);
 			productName = "mtg-xproject-starter";
 			productReference = FA5C82F42FB868930011A1CB /* mtg-xproject-starter.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = FA5C82EB2FB868930011A1CB;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				FA5C83202FB86A000011A1CB /* XCRemoteSwiftPackageReference "mtg-sdk-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FA5C82F52FB868930011A1CB /* Products */;
 			projectDirPath = "";
@@ -578,6 +587,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		FA5C83202FB86A000011A1CB /* XCRemoteSwiftPackageReference "mtg-sdk-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MagicTheGathering/mtg-sdk-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FA5C83212FB86A000011A1CB /* MTGSDKSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA5C83202FB86A000011A1CB /* XCRemoteSwiftPackageReference "mtg-sdk-swift" */;
+			productName = MTGSDKSwift;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = FA5C82EC2FB868930011A1CB /* Project object */;
 }
