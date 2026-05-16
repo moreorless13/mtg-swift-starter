@@ -70,6 +70,9 @@ private extension MTGCardSummary {
             manaCost: card.manaCost,
             type: card.type,
             setCode: card.set,
+            setName: card.setName,
+            collectorNumber: card.number,
+            imageURL: card.imageUrl.flatMap(URL.init(string:)),
             rarity: card.rarity
         )
     }

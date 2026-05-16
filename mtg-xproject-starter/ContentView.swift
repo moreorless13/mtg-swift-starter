@@ -9,13 +9,20 @@ import SwiftUI
 
 struct ContentView: View {
     private let cardService: any MTGCardFetching
+    private let cardIdentifier: any CardIdentifying
 
     @State private var query = "Black Lotus"
     @State private var cards: [MTGCardSummary] = []
     @State private var loadState = LoadState.idle
+    @State private var resultNotice: String?
+    @State private var isScannerPresented = false
 
-    init(cardService: any MTGCardFetching = MTGCardService()) {
+    init(
+        cardService: any MTGCardFetching = MTGCardService(),
+        cardIdentifier: any CardIdentifying = ScryfallCardService()
+    ) {
         self.cardService = cardService
+        self.cardIdentifier = cardIdentifier
     }
 
     var body: some View {
@@ -27,9 +34,18 @@ struct ContentView: View {
                     errorBanner(message)
                 }
 
+                if let resultNotice {
+                    noticeBanner(resultNotice)
+                }
+
                 cardList
             }
             .navigationTitle("MTG Cards")
+            .sheet(isPresented: $isScannerPresented) {
+                CardScannerView(cardIdentifier: cardIdentifier) { result in
+                    applyIdentificationResult(result)
+                }
+            }
             .task {
                 guard cards.isEmpty, loadState == .idle else {
                     return
@@ -53,11 +69,20 @@ struct ContentView: View {
             Button {
                 Task { await fetchCards() }
             } label: {
-                Label("Fetch", systemImage: "magnifyingglass")
-                    .labelStyle(.titleAndIcon)
+                Image(systemName: "magnifyingglass")
             }
             .buttonStyle(.borderedProminent)
             .disabled(loadState.isLoading)
+            .accessibilityLabel("Fetch cards")
+
+            Button {
+                isScannerPresented = true
+            } label: {
+                Image(systemName: "camera.viewfinder")
+            }
+            .buttonStyle(.bordered)
+            .disabled(loadState.isLoading)
+            .accessibilityLabel("Scan a card")
         }
         .padding()
         .background(.background)
@@ -97,8 +122,18 @@ struct ContentView: View {
             .padding(.bottom, 8)
     }
 
+    private func noticeBanner(_ message: String) -> some View {
+        Label(message, systemImage: "checkmark.seal.fill")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+    }
+
     private func fetchCards() async {
         loadState = .loading
+        resultNotice = nil
 
         do {
             cards = try await cardService.fetchCards(named: query)
@@ -108,37 +143,108 @@ struct ContentView: View {
             loadState = .failed(error.userFacingMessage)
         }
     }
+
+    private func applyIdentificationResult(_ result: CardIdentificationResult) {
+        switch result {
+        case .exact(let card):
+            query = card.name
+            cards = [card]
+            resultNotice = "Scanned exact print."
+            loadState = .loaded
+        case .candidates(let candidates):
+            query = candidates.first?.name ?? query
+            cards = candidates
+            resultNotice = "Scan found multiple printings. Choose the matching set and collector number."
+            loadState = .loaded
+        case .notFound(let query):
+            cards = []
+            resultNotice = nil
+            loadState = .failed("No Scryfall match found for \(query).")
+        }
+    }
 }
 
 private struct CardSummaryRow: View {
     let card: MTGCardSummary
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(card.name)
-                    .font(.headline)
+        HStack(alignment: .top, spacing: 12) {
+            cardThumbnail
 
-                Spacer(minLength: 12)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(card.name)
+                        .font(.headline)
 
-                Text(card.manaCost)
+                    Spacer(minLength: 12)
+
+                    Text(card.manaCost)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                }
+
+                Text(card.type)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.trailing)
-            }
+                    .foregroundStyle(.primary)
 
-            Text(card.type)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
+                if let setName = card.setName {
+                    Text(setName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-            HStack {
-                Label(card.setCode, systemImage: "rectangle.stack")
-                Label(card.rarity, systemImage: "sparkles")
+                HStack(spacing: 12) {
+                    setCodeLabel
+
+                    if let collectorNumber = card.collectorNumber {
+                        Label("#\(collectorNumber)", systemImage: "number")
+                    }
+
+                    Label(card.rarity, systemImage: "sparkles")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
         .padding(.vertical, 6)
+    }
+
+    private var cardThumbnail: some View {
+        AsyncImage(url: card.imageURL) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFill()
+            default:
+                Image(systemName: "rectangle.stack.badge.questionmark")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 52, height: 72)
+        .background(.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .accessibilityHidden(true)
+    }
+
+    private var setCodeLabel: some View {
+        HStack(spacing: 4) {
+            AsyncImage(url: card.setIconURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                default:
+                    Image(systemName: "rectangle.stack")
+                }
+            }
+            .frame(width: 16, height: 16)
+
+            Text(card.setCode)
+        }
     }
 }
 
@@ -153,7 +259,7 @@ private enum LoadState: Equatable {
     }
 }
 
-private extension Error {
+extension Error {
     var userFacingMessage: String {
         if let localizedError = self as? LocalizedError, let errorDescription = localizedError.errorDescription {
             return errorDescription
